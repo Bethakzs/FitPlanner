@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="create-nutrition-reports-table" author="Roman">
+        <createTable tableName="nutrition_reports">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="weight" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="height" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gender" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="activity_level" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="water_intake" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bmi" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bmi_category" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bmr" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tdee" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_weight" type="DOUBLE"/>
+            <column name="daily_protein" type="DOUBLE"/>
+            <column name="daily_fats" type="DOUBLE"/>
+            <column name="daily_carbs" type="DOUBLE"/>
+            <column name="recommended_water" type="DOUBLE"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="nutrition_reports"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_nutrition_report_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createTable tableName="report_allergies">
+            <column name="report_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="allergy_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="report_allergies"
+                                 baseColumnNames="report_id"
+                                 constraintName="fk_report_allergies_report"
+                                 referencedTableName="nutrition_reports"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex indexName="idx_nutrition_reports_user_id" tableName="nutrition_reports">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_nutrition_reports_created_at" tableName="nutrition_reports">
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
+
