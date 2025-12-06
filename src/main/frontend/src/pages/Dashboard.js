@@ -1,21 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { nutritionAPI, authAPI } from '../services/api';
+import { authAPI, userAPI, systemAPI, dietAPI, recommendationAPI, nutritionAPI } from '../services/api';
 
 function Dashboard() {
+    const [activeTab, setActiveTab] = useState('nutrition');
     const [formData, setFormData] = useState({
         weight: '',
         height: '',
+        age: '',
         gender: 'MALE',
         activityLevel: 'MEDIUM',
         waterIntake: '',
         allergies: [],
         saveReport: false
     });
-    const [report, setReport] = useState(null);
+    const [currentReport, setCurrentReport] = useState(null);
+    const [reports, setReports] = useState([]);
+    const [diets, setDiets] = useState([]);
+    const [recommendations, setRecommendations] = useState([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        loadUserData();
+        loadReports();
+    }, []);
+
+    const loadUserData = async () => {
+        try {
+            const response = await userAPI.getCurrentUser();
+            if (response.data) {
+                setFormData(prev => ({
+                    ...prev,
+                    weight: response.data.weight || '',
+                    height: response.data.height || '',
+                    age: response.data.age || '',
+                    gender: response.data.gender || 'MALE',
+                    activityLevel: response.data.activityLevel || 'MEDIUM'
+                }));
+            }
+        } catch (err) {
+            console.error('Failed to load user data:', err);
+        }
+    };
+
+    const loadReports = async () => {
+        try {
+            const response = await nutritionAPI.getReports();
+            setReports(response.data);
+        } catch (err) {
+            console.error('Failed to load reports:', err);
+        }
+    };
+
+    const loadReportData = async (reportId) => {
+        try {
+            const [dietsRes, recommendationsRes] = await Promise.all([
+                dietAPI.getUserDiets(),
+                recommendationAPI.getUserRecommendations()
+            ]);
+            setDiets(dietsRes.data);
+            setRecommendations(recommendationsRes.data);
+        } catch (err) {
+            console.error('Failed to load report data:', err);
+        }
+    };
+
+    const handleViewReport = async (report) => {
+        setCurrentReport(report);
+        await loadReportData();
+        setActiveTab('report-view');
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -32,7 +89,30 @@ function Dashboard() {
         setFormData({ ...formData, allergies });
     };
 
-    const handleSubmit = async (e) => {
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        
+        try {
+            const payload = {
+                age: parseInt(formData.age),
+                weight: parseFloat(formData.weight),
+                height: parseFloat(formData.height),
+                gender: formData.gender,
+                activityLevel: formData.activityLevel
+            };
+            await userAPI.updateCurrentUser(payload);
+            setSuccess('Profile updated successfully!');
+            loadUserData();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to update profile');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGenerateReport = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
@@ -40,18 +120,43 @@ function Dashboard() {
         try {
             const payload = {
                 ...formData,
+                age: parseInt(formData.age),
                 weight: parseFloat(formData.weight),
                 height: parseFloat(formData.height),
-                waterIntake: parseFloat(formData.waterIntake)
+                waterIntake: parseFloat(formData.waterIntake),
+                saveReport: true
             };
-            const response = await nutritionAPI.generateReport(payload);
-            setReport(response.data);
+            const response = await systemAPI.saveResults(payload);
+            setCurrentReport(response.data);
+            setSuccess('✅ Report, diet, and recommendations generated successfully!');
+            
+            await loadReportData();
+            await loadReports();
+            setActiveTab('report-view');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to generate report');
         } finally {
             setLoading(false);
         }
     };
+
+    const handleDeleteReport = async (reportId) => {
+        if (!window.confirm('Are you sure you want to delete this report?')) return;
+        
+        try {
+            await nutritionAPI.deleteReport(reportId);
+            setSuccess('✅ Report deleted successfully!');
+            await loadReports();
+            if (currentReport?.reportId === reportId) {
+                setCurrentReport(null);
+                setActiveTab('nutrition');
+            }
+        } catch (err) {
+            setError('Failed to delete report');
+        }
+    };
+
+
 
     const handleLogout = async () => {
         try {
@@ -69,9 +174,6 @@ function Dashboard() {
                 <div className="header-content">
                     <h1>🥗 Sonya Nutrition</h1>
                     <div className="header-actions">
-                        <button onClick={() => navigate('/history')} className="btn-secondary">
-                            📊 View History
-                        </button>
                         <button onClick={handleLogout} className="btn-logout">
                             Logout
                         </button>
@@ -79,202 +181,369 @@ function Dashboard() {
                 </div>
             </header>
 
+            <div className="dashboard-tabs">
+                <button 
+                    className={activeTab === 'profile' ? 'active' : ''} 
+                    onClick={() => setActiveTab('profile')}
+                >
+                    👤 Profile
+                </button>
+                <button 
+                    className={activeTab === 'nutrition' ? 'active' : ''} 
+                    onClick={() => setActiveTab('nutrition')}
+                >
+                    📊 Generate Report
+                </button>
+                <button 
+                    className={activeTab === 'history' ? 'active' : ''} 
+                    onClick={() => setActiveTab('history')}
+                >
+                    📚 History
+                </button>
+                {currentReport && (
+                    <button 
+                        className={activeTab === 'report-view' ? 'active' : ''} 
+                        onClick={() => setActiveTab('report-view')}
+                    >
+                        📈 Current Report
+                    </button>
+                )}
+            </div>
+
             <div className="dashboard-content">
-                <div className="form-section">
-                    <h2>Generate Nutrition Report</h2>
-                    {error && <div className="error">{error}</div>}
-                    
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-row">
+                {error && <div className="error">{error}</div>}
+                {success && <div className="success">{success}</div>}
+
+                {activeTab === 'profile' && (
+                    <div className="tab-content">
+                        <h2>Update Your Profile</h2>
+                        <form onSubmit={handleUpdateProfile} className="profile-form">
+                            <div className="form-row">
+                                <input
+                                    type="number"
+                                    name="age"
+                                    placeholder="Age"
+                                    value={formData.age}
+                                    onChange={handleChange}
+                                    required
+                                    min="1"
+                                />
+                                <input
+                                    type="number"
+                                    name="weight"
+                                    placeholder="Weight (kg)"
+                                    value={formData.weight}
+                                    onChange={handleChange}
+                                    required
+                                    min="20"
+                                    step="0.1"
+                                />
+                            </div>
+                            <div className="form-row">
+                                <input
+                                    type="number"
+                                    name="height"
+                                    placeholder="Height (cm)"
+                                    value={formData.height}
+                                    onChange={handleChange}
+                                    required
+                                    min="100"
+                                    step="0.1"
+                                />
+                                <select name="gender" value={formData.gender} onChange={handleChange}>
+                                    <option value="MALE">Male</option>
+                                    <option value="FEMALE">Female</option>
+                                </select>
+                            </div>
+                            <select name="activityLevel" value={formData.activityLevel} onChange={handleChange}>
+                                <option value="LOW">Low Activity</option>
+                                <option value="MEDIUM">Medium Activity</option>
+                                <option value="HIGH">High Activity</option>
+                            </select>
+                            <button type="submit" disabled={loading}>
+                                {loading ? 'Updating...' : 'Update Profile'}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {activeTab === 'nutrition' && (
+                    <div className="tab-content">
+                        <h2>Generate Full Nutrition Report</h2>
+                        <form onSubmit={handleGenerateReport}>
                             <input
                                 type="number"
-                                name="weight"
-                                placeholder="Weight (kg)"
-                                value={formData.weight}
+                                name="waterIntake"
+                                placeholder="Water Intake (liters)"
+                                value={formData.waterIntake}
                                 onChange={handleChange}
                                 required
-                                min="20"
+                                min="0"
                                 step="0.1"
                             />
-                            <input
-                                type="number"
-                                name="height"
-                                placeholder="Height (cm)"
-                                value={formData.height}
-                                onChange={handleChange}
-                                required
-                                min="100"
-                                step="0.1"
-                            />
-                        </div>
 
-                        <select name="gender" value={formData.gender} onChange={handleChange}>
-                            <option value="MALE">Male</option>
-                            <option value="FEMALE">Female</option>
-                        </select>
+                            <div className="allergies-section">
+                                <label>Allergies (optional):</label>
+                                <div className="checkbox-group">
+                                    {['GLUTEN', 'LACTOSE', 'NUTS', 'EGGS', 'SEAFOOD', 'SOY'].map(allergy => (
+                                        <label key={allergy} className="checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.allergies.includes(allergy)}
+                                                onChange={() => handleAllergyChange(allergy)}
+                                            />
+                                            {allergy}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
 
-                        <select name="activityLevel" value={formData.activityLevel} onChange={handleChange}>
-                            <option value="LOW">Low Activity</option>
-                            <option value="MEDIUM">Medium Activity</option>
-                            <option value="HIGH">High Activity</option>
-                        </select>
+                            <button type="submit" disabled={loading}>
+                                {loading ? 'Generating...' : 'Generate Complete Report (with Diet & Recommendations)'}
+                            </button>
+                        </form>
+                        <p className="info-text">
+                            ℹ️ This will automatically create: nutrition report + personalized diet + exercise recommendations
+                        </p>
+                    </div>
+                )}
 
-                        <input
-                            type="number"
-                            name="waterIntake"
-                            placeholder="Water Intake (liters)"
-                            value={formData.waterIntake}
-                            onChange={handleChange}
-                            required
-                            min="0"
-                            step="0.1"
-                        />
-
-                        <div className="allergies-section">
-                            <label>Allergies (optional):</label>
-                            <div className="checkbox-group">
-                                {['GLUTEN', 'LACTOSE', 'NUTS', 'EGGS', 'SEAFOOD', 'SOY'].map(allergy => (
-                                    <label key={allergy} className="checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.allergies.includes(allergy)}
-                                            onChange={() => handleAllergyChange(allergy)}
-                                        />
-                                        {allergy}
-                                    </label>
+                {activeTab === 'history' && (
+                    <div className="tab-content">
+                        <h2>📚 Reports History</h2>
+                        {reports.length === 0 ? (
+                            <div className="empty-state">
+                                <p>No reports yet. Generate your first nutrition report!</p>
+                                <button onClick={() => setActiveTab('nutrition')}>
+                                    📊 Generate Report
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="reports-list">
+                                {reports.map(report => (
+                                    <div key={report.reportId} className="report-card">
+                                        <div className="card-header">
+                                            <h3>Report from {new Date(report.createdAt).toLocaleDateString()}</h3>
+                                            <div className="card-actions">
+                                                <button 
+                                                    onClick={() => handleViewReport(report)}
+                                                    className="btn-view"
+                                                >
+                                                    👁️ View
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteReport(report.reportId)}
+                                                    className="btn-delete"
+                                                    title="Delete entire report with diet and recommendations"
+                                                >
+                                                    🗑️ Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="report-summary">
+                                            <p><strong>BMI:</strong> {report.bmi?.toFixed(1)} ({report.bmiCategory})</p>
+                                            <p><strong>Weight:</strong> {report.weight} kg | <strong>Height:</strong> {report.height} cm</p>
+                                            <p><strong>Daily Calories:</strong> {report.macronutrients?.dailyCalories} kcal</p>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
-                        </div>
+                        )}
+                    </div>
+                )}
 
-                        <label className="checkbox-label save-report">
-                            <input
-                                type="checkbox"
-                                name="saveReport"
-                                checked={formData.saveReport}
-                                onChange={handleChange}
-                            />
-                            Save this report to history
-                        </label>
-
-                        <button type="submit" disabled={loading}>
-                            {loading ? 'Generating...' : 'Generate Report'}
-                        </button>
-                    </form>
-                </div>
-
-                {report && (
+                {activeTab === 'report-view' && currentReport && (
                     <div className="report-section">
-                        <h2>Your Nutrition Report</h2>
+                        <h2>Nutrition Report</h2>
+                        <p className="report-date">Generated: {new Date(currentReport.createdAt).toLocaleString()}</p>
                         
                         <div className="report-card">
                             <h3>Body Metrics</h3>
-                            <p><strong>BMI:</strong> {report.bmi} ({report.bmiCategory})</p>
-                            <p>{report.bmiInterpretation}</p>
-                            <p><strong>Target Weight:</strong> {report.targetWeight} kg</p>
-                            <p>{report.weightRecommendation}</p>
+                            <p><strong>BMI:</strong> {currentReport.bmi?.toFixed(1)} ({currentReport.bmiCategory})</p>
+                            <p>{currentReport.bmiInterpretation}</p>
+                            <p><strong>Target Weight:</strong> {currentReport.targetWeight} kg</p>
+                            <p>{currentReport.weightRecommendation}</p>
                         </div>
 
                         <div className="report-card">
                             <h3>Daily Caloric Needs</h3>
-                            <p><strong>BMR:</strong> {report.bmr} kcal</p>
-                            <p><strong>TDEE:</strong> {report.tdee} kcal</p>
+                            <p><strong>BMR:</strong> {currentReport.bmr} kcal</p>
+                            <p><strong>TDEE:</strong> {currentReport.tdee} kcal</p>
                         </div>
 
-                        <div className="report-card">
-                            <h3>🍽️ Daily Nutrition Plan</h3>
-                            <p className="daily-calories">
-                                <strong>Daily Calories:</strong> {report.macronutrients.dailyCalories} kcal
-                            </p>
-                            
-                            {report.foodRecommendations && (
-                                <div className="nutrition-grid">
-                                    <div className="macro-section">
-                                        <div className="macro-header protein">
-                                            <span className="macro-icon">🍗</span>
-                                            <div className="macro-info">
-                                                <h4>Protein</h4>
-                                                <span className="macro-amount">{report.macronutrients.protein}g</span>
-                                                <span className="macro-percentage">({report.macronutrients.proteinPercentage})</span>
+                        {diets && diets.length > 0 && (
+                            <div className="report-card">
+                                <h3>🍽️ Recommended Diet Plan</h3>
+                                {(() => {
+                                    const latestDiet = diets[0];
+                                    return (
+                                        <div className="diet-display">
+                                            <div className="macros-grid">
+                                                <div className="macro-item protein">
+                                                    <span className="macro-icon">🍗</span>
+                                                    <div>
+                                                        <strong>Protein</strong>
+                                                        <span>{latestDiet.totalProtein?.toFixed(1)}g</span>
+                                                    </div>
+                                                </div>
+                                                <div className="macro-item fats">
+                                                    <span className="macro-icon">🥑</span>
+                                                    <div>
+                                                        <strong>Fats</strong>
+                                                        <span>{latestDiet.totalFats?.toFixed(1)}g</span>
+                                                    </div>
+                                                </div>
+                                                <div className="macro-item carbs">
+                                                    <span className="macro-icon">🌾</span>
+                                                    <div>
+                                                        <strong>Carbs</strong>
+                                                        <span>{latestDiet.totalCarbs?.toFixed(1)}g</span>
+                                                    </div>
+                                                </div>
+                                                <div className="macro-item total">
+                                                    <span className="macro-icon">🔥</span>
+                                                    <div>
+                                                        <strong>Total</strong>
+                                                        <span>{latestDiet.totalCalories?.toFixed(0)} kcal</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="food-items">
-                                            {report.foodRecommendations.proteinFoods.map((food, idx) => (
-                                                <span key={idx} className="food-tag protein">{food}</span>
-                                            ))}
-                                        </div>
-                                    </div>
+                                            {latestDiet.products && latestDiet.products.length > 0 && (
+                                                <div className="diet-products">
+                                                    <h4>Diet Composition:</h4>
+                                                    {(() => {
+                                                        // Group products by dominant macronutrient
+                                                        const proteins = latestDiet.products.filter(p => 
+                                                            p.protein > p.fats && p.protein > p.carbohydrates
+                                                        );
+                                                        const fats = latestDiet.products.filter(p => 
+                                                            p.fats > p.protein && p.fats > p.carbohydrates
+                                                        );
+                                                        const carbs = latestDiet.products.filter(p => 
+                                                            p.carbohydrates > p.protein && p.carbohydrates > p.fats
+                                                        );
 
-                                    <div className="macro-section">
-                                        <div className="macro-header fats">
-                                            <span className="macro-icon">🥑</span>
-                                            <div className="macro-info">
-                                                <h4>Healthy Fats</h4>
-                                                <span className="macro-amount">{report.macronutrients.fats}g</span>
-                                                <span className="macro-percentage">({report.macronutrients.fatsPercentage})</span>
-                                            </div>
-                                        </div>
-                                        <div className="food-items">
-                                            {report.foodRecommendations.fatFoods.map((food, idx) => (
-                                                <span key={idx} className="food-tag fats">{food}</span>
-                                            ))}
-                                        </div>
-                                    </div>
+                                                        return (
+                                                            <>
+                                                                {proteins.length > 0 && (
+                                                                    <div className="product-category">
+                                                                        <h5 className="category-title protein-category">
+                                                                            <span className="category-icon">🍗</span>
+                                                                            Protein Sources
+                                                                        </h5>
+                                                                        <div className="products-grid">
+                                                                            {proteins.map((product, idx) => (
+                                                                                <div key={idx} className="product-item-card">
+                                                                                    <strong>{product.name}</strong>
+                                                                                    <span className="calories">{product.calories} kcal</span>
+                                                                                    <span className="macros-small">
+                                                                                        P: {product.protein}g | F: {product.fats}g | C: {product.carbohydrates}g
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
 
-                                    <div className="macro-section">
-                                        <div className="macro-header carbs">
-                                            <span className="macro-icon">🌾</span>
-                                            <div className="macro-info">
-                                                <h4>Carbohydrates</h4>
-                                                <span className="macro-amount">{report.macronutrients.carbs}g</span>
-                                                <span className="macro-percentage">({report.macronutrients.carbsPercentage})</span>
-                                            </div>
+                                                                {fats.length > 0 && (
+                                                                    <div className="product-category">
+                                                                        <h5 className="category-title fats-category">
+                                                                            <span className="category-icon">🥑</span>
+                                                                            Healthy Fats
+                                                                        </h5>
+                                                                        <div className="products-grid">
+                                                                            {fats.map((product, idx) => (
+                                                                                <div key={idx} className="product-item-card">
+                                                                                    <strong>{product.name}</strong>
+                                                                                    <span className="calories">{product.calories} kcal</span>
+                                                                                    <span className="macros-small">
+                                                                                        P: {product.protein}g | F: {product.fats}g | C: {product.carbohydrates}g
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {carbs.length > 0 && (
+                                                                    <div className="product-category">
+                                                                        <h5 className="category-title carbs-category">
+                                                                            <span className="category-icon">🌾</span>
+                                                                            Carbohydrates
+                                                                        </h5>
+                                                                        <div className="products-grid">
+                                                                            {carbs.map((product, idx) => (
+                                                                                <div key={idx} className="product-item-card">
+                                                                                    <strong>{product.name}</strong>
+                                                                                    <span className="calories">{product.calories} kcal</span>
+                                                                                    <span className="macros-small">
+                                                                                        P: {product.protein}g | F: {product.fats}g | C: {product.carbohydrates}g
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="food-items">
-                                            {report.foodRecommendations.carbFoods.map((food, idx) => (
-                                                <span key={idx} className="food-tag carbs">{food}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
 
                         <div className="report-card">
-                            <h3>Water Recommendation</h3>
-                            <p><strong>Current:</strong> {report.waterRecommendation.currentIntake}L</p>
-                            <p><strong>Recommended:</strong> {report.waterRecommendation.recommendedIntake}L</p>
-                            <p><strong>Status:</strong> {report.waterRecommendation.status}</p>
-                            <p>{report.waterRecommendation.advice}</p>
-                        </div>
-
-                        <div className="report-card">
-                            <h3>Activity Recommendations</h3>
+                            <h3>📋 Activity Recommendations</h3>
                             <ul>
-                                {report.activityRecommendations.map((rec, idx) => (
+                                {currentReport.activityRecommendations?.map((rec, idx) => (
                                     <li key={idx}>{rec}</li>
                                 ))}
                             </ul>
                         </div>
 
-                        {report.allergies && report.allergies.length > 0 && (
-                            <div className="report-card">
-                                <h3>Dietary Restrictions</h3>
-                                <ul>
-                                    {report.dietaryRestrictions.map((restriction, idx) => (
-                                        <li key={idx}>{restriction}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
                         <div className="report-card">
-                            <h3>General Tips</h3>
+                            <h3>💡 General Tips</h3>
                             <ul>
-                                {report.generalTips.map((tip, idx) => (
+                                {currentReport.generalTips?.map((tip, idx) => (
                                     <li key={idx}>{tip}</li>
                                 ))}
                             </ul>
                         </div>
+
+
+                        {recommendations && recommendations.length > 0 && (
+                            <div className="report-card recommendations-section">
+                                <h3>💪 Exercise Recommendations</h3>
+                                {(() => {
+                                    const latestRec = recommendations[0];
+                                    return (
+                                        <div className="recommendation-display">
+                                            <p className="description">{latestRec.description}</p>
+                                            {latestRec.exercises && latestRec.exercises.length > 0 && (
+                                                <div className="exercises">
+                                                    <h4>Recommended Exercises:</h4>
+                                                    <div className="exercises-grid">
+                                                        {latestRec.exercises.map(ex => (
+                                                            <div key={ex.id} className="exercise-card">
+                                                                <strong>{ex.name}</strong>
+                                                                <div className="exercise-details">
+                                                                    <span className="exercise-type">{ex.type}</span>
+                                                                    {ex.durationMinutes && <span>⏱️ {ex.durationMinutes} min</span>}
+                                                                    {ex.caloriesBurned && <span>🔥 {ex.caloriesBurned} kcal</span>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -283,4 +552,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

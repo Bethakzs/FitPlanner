@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="insert-sample-exercises" author="Roman">
+        <!-- Cardio exercises -->
+        <insert tableName="exercises">
+            <column name="name" value="Running"/>
+            <column name="type" value="cardio"/>
+            <column name="calories_burned" value="300.0"/>
+            <column name="duration_minutes" value="30"/>
+            <column name="description" value="Running at moderate speed 8 km/h"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Brisk Walking"/>
+            <column name="type" value="cardio"/>
+            <column name="calories_burned" value="150.0"/>
+            <column name="duration_minutes" value="30"/>
+            <column name="description" value="Fast-paced walking"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Cycling"/>
+            <column name="type" value="cardio"/>
+            <column name="calories_burned" value="250.0"/>
+            <column name="duration_minutes" value="30"/>
+            <column name="description" value="Cycling at moderate intensity"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Swimming"/>
+            <column name="type" value="cardio"/>
+            <column name="calories_burned" value="400.0"/>
+            <column name="duration_minutes" value="30"/>
+            <column name="description" value="Freestyle swimming"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Jump Rope"/>
+            <column name="type" value="cardio"/>
+            <column name="calories_burned" value="350.0"/>
+            <column name="duration_minutes" value="20"/>
+            <column name="description" value="Intensive jumping"/>
+        </insert>
+        
+        <!-- Strength exercises -->
+        <insert tableName="exercises">
+            <column name="name" value="Push-ups"/>
+            <column name="type" value="strength"/>
+            <column name="calories_burned" value="100.0"/>
+            <column name="duration_minutes" value="15"/>
+            <column name="description" value="Classic floor push-ups"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Squats"/>
+            <column name="type" value="strength"/>
+            <column name="calories_burned" value="120.0"/>
+            <column name="duration_minutes" value="15"/>
+            <column name="description" value="Bodyweight squats"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Plank"/>
+            <column name="type" value="strength"/>
+            <column name="calories_burned" value="80.0"/>
+            <column name="duration_minutes" value="10"/>
+            <column name="description" value="Static elbow plank"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Pull-ups"/>
+            <column name="type" value="strength"/>
+            <column name="calories_burned" value="130.0"/>
+            <column name="duration_minutes" value="15"/>
+            <column name="description" value="Pull-ups on horizontal bar"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Dumbbell Press"/>
+            <column name="type" value="strength"/>
+            <column name="calories_burned" value="180.0"/>
+            <column name="duration_minutes" value="20"/>
+            <column name="description" value="Dumbbell bench press"/>
+        </insert>
+        
+        <!-- Stretching exercises -->
+        <insert tableName="exercises">
+            <column name="name" value="Yoga"/>
+            <column name="type" value="stretching"/>
+            <column name="calories_burned" value="150.0"/>
+            <column name="duration_minutes" value="45"/>
+            <column name="description" value="Hatha yoga for beginners"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Stretching"/>
+            <column name="type" value="stretching"/>
+            <column name="calories_burned" value="50.0"/>
+            <column name="duration_minutes" value="20"/>
+            <column name="description" value="General muscle stretching"/>
+        </insert>
+        <insert tableName="exercises">
+            <column name="name" value="Pilates"/>
+            <column name="type" value="stretching"/>
+            <column name="calories_burned" value="120.0"/>
+            <column name="duration_minutes" value="45"/>
+            <column name="description" value="Pilates exercise set"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>
+

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="create-diets-table" author="Roman">
+        <createTable tableName="diets">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_calories" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="balance_description" type="VARCHAR(500)"/>
+            <column name="total_protein" type="DOUBLE"/>
+            <column name="total_fats" type="DOUBLE"/>
+            <column name="total_carbs" type="DOUBLE"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="diets"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_diets_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <!-- Many-to-Many relationship table -->
+        <createTable tableName="diet_products">
+            <column name="diet_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="product_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="diet_products"
+                       columnNames="diet_id,product_id"
+                       constraintName="pk_diet_products"/>
+
+        <addForeignKeyConstraint baseTableName="diet_products"
+                                 baseColumnNames="diet_id"
+                                 constraintName="fk_diet_products_diet"
+                                 referencedTableName="diets"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="diet_products"
+                                 baseColumnNames="product_id"
+                                 constraintName="fk_diet_products_product"
+                                 referencedTableName="products"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>
+

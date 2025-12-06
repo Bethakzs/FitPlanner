@@ -3,12 +3,15 @@ package com.example.sonya.service.impl;
 import com.example.sonya.dto.report.NutritionReportResponse;
 import com.example.sonya.dto.report.UserMetricsRequest;
 import com.example.sonya.entity.NutritionReport;
+import com.example.sonya.entity.PhysicalCharacteristics;
+import com.example.sonya.entity.Product;
 import com.example.sonya.entity.User;
 import com.example.sonya.enums.*;
 import com.example.sonya.exception.UserNotFound;
 import com.example.sonya.repository.NutritionReportRepository;
 import com.example.sonya.repository.UserRepository;
-import com.example.sonya.service.NutritionService;
+import com.example.sonya.service.*;
+import com.example.sonya.dto.user.UpdateUserDataRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,11 @@ public class NutritionServiceImpl implements NutritionService {
 
     private final UserRepository userRepository;
     private final NutritionReportRepository nutritionReportRepository;
+    private final PhysicalCharacteristicsService physicalCharacteristicsService;
+    private final DietService dietService;
+    private final ProductService productService;
+    private final RecommendationService recommendationService;
+    private final UserService userService;
 
     private static final double PROTEIN_CALORIES_PER_GRAM = 4.0;
     private static final double CARBS_CALORIES_PER_GRAM = 4.0;
@@ -34,6 +42,29 @@ public class NutritionServiceImpl implements NutritionService {
     public NutritionReportResponse generateReport(UserMetricsRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFound("User not found", HttpStatus.NOT_FOUND));
+
+        boolean userDataChanged = false;
+        if (request.getWeight() != null && !request.getWeight().equals(user.getWeight())) {
+            user.setWeight(request.getWeight());
+            userDataChanged = true;
+        }
+        if (request.getHeight() != null && !request.getHeight().equals(user.getHeight())) {
+            user.setHeight(request.getHeight());
+            userDataChanged = true;
+        }
+        if (request.getGender() != null && !request.getGender().equals(user.getGender())) {
+            user.setGender(request.getGender());
+            userDataChanged = true;
+        }
+        if (request.getActivityLevel() != null && !request.getActivityLevel().equals(user.getActivityLevel())) {
+            user.setActivityLevel(request.getActivityLevel());
+            userDataChanged = true;
+        }
+        
+        if (userDataChanged) {
+            user.setModifiedDate(System.currentTimeMillis());
+            userRepository.save(user);
+        }
 
         double bmi = calculateBMI(request.getWeight(), request.getHeight());
         BMICategory bmiCategory = determineBMICategory(bmi);
@@ -48,6 +79,15 @@ public class NutritionServiceImpl implements NutritionService {
 
         NutritionReport report = null;
         if (request.getSaveReport()) {
+            if (user.getWeight() != null && user.getHeight() != null && 
+                user.getGender() != null && user.getAge() != null) {
+                try {
+                    physicalCharacteristicsService.calculateAndSave(user);
+                } catch (Exception e) {
+                    System.err.println("Failed to save physical characteristics: " + e.getMessage());
+                }
+            }
+            
             report = NutritionReport.builder()
                     .user(user)
                     .weight(request.getWeight())
@@ -69,10 +109,51 @@ public class NutritionServiceImpl implements NutritionService {
                     .build();
 
             report = nutritionReportRepository.save(report);
+            
+            try {
+                createAutoDiet(user, request.getAllergies(), tdee);
+            } catch (Exception e) {
+                System.err.println("Failed to create auto diet: " + e.getMessage());
+            }
         }
 
         return buildResponse(request, report != null ? report.getId() : null, bmi, bmiCategory,
                 bmr, tdee, targetWeight, dailyProtein, dailyFats, dailyCarbs, recommendedWater);
+    }
+    
+    private void createAutoDiet(User user, Set<AllergyType> allergies, double tdee) {
+        List<FoodItem> proteinFoods = FoodItem.getByCategoryFiltered(FoodCategory.PROTEIN, allergies);
+        List<FoodItem> fatFoods = FoodItem.getByCategoryFiltered(FoodCategory.FATS, allergies);
+        List<FoodItem> carbFoods = FoodItem.getByCategoryFiltered(FoodCategory.CARBS, allergies);
+        
+        List<Long> selectedProductIds = new ArrayList<>();
+        
+        addRandomProducts(selectedProductIds, proteinFoods, 6);
+        addRandomProducts(selectedProductIds, fatFoods, 6);
+        addRandomProducts(selectedProductIds, carbFoods, 8);
+        
+        if (!selectedProductIds.isEmpty()) {
+            dietService.createDiet(user, selectedProductIds);
+        }
+    }
+    
+    private void addRandomProducts(List<Long> productIds, List<FoodItem> foodItems, int count) {
+        if (foodItems.isEmpty()) return;
+        
+        List<FoodItem> shuffled = new ArrayList<>(foodItems);
+        Collections.shuffle(shuffled);
+        
+        for (int i = 0; i < Math.min(count, shuffled.size()); i++) {
+            FoodItem foodItem = shuffled.get(i);
+            try {
+                List<Product> products = productService.findByName(foodItem.getDisplayName());
+                if (!products.isEmpty()) {
+                    productIds.add(products.get(0).getId());
+                }
+            } catch (Exception e) {
+                System.err.println("Product not found: " + foodItem.getDisplayName());
+            }
+        }
     }
 
     @Override
@@ -98,6 +179,51 @@ public class NutritionServiceImpl implements NutritionService {
                         report.getRecommendedWater()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void deleteReport(Long reportId) {
+        nutritionReportRepository.deleteById(reportId);
+    }
+
+    @Override
+    @Transactional
+    public NutritionReportResponse generateCompleteReport(UserMetricsRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserNotFound("User not found", HttpStatus.NOT_FOUND));
+        
+        if (request.getAge() != null) {
+            UpdateUserDataRequest updateRequest = new UpdateUserDataRequest();
+            updateRequest.setAge(request.getAge());
+            updateRequest.setWeight(request.getWeight());
+            updateRequest.setHeight(request.getHeight());
+            updateRequest.setGender(request.getGender());
+            updateRequest.setActivityLevel(request.getActivityLevel());
+            
+            userService.updateUserData(user.getId(), updateRequest);
+            
+            user = userRepository.findById(user.getId())
+                    .orElseThrow(() -> new UserNotFound("User not found", HttpStatus.NOT_FOUND));
+        }
+        
+        if (user.getAge() != null && user.getWeight() != null && user.getHeight() != null) {
+            try {
+                physicalCharacteristicsService.calculateAndSave(user);
+            } catch (Exception e) {
+                System.err.println("Failed to calculate physical characteristics: " + e.getMessage());
+            }
+        }
+        
+        NutritionReportResponse response = generateReport(request, userEmail);
+        
+        try {
+            recommendationService.generateRecommendations(user);
+        } catch (Exception e) {
+            System.err.println("Failed to generate recommendations: " + e.getMessage());
+        }
+        
+        return response;
     }
 
     private double calculateBMI(double weight, double height) {

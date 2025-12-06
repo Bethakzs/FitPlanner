@@ -11,9 +11,11 @@ import java.util.stream.Collectors;
 public enum FoodItem {
     CHICKEN_BREAST("Chicken Breast", FoodCategory.PROTEIN),
     TURKEY("Turkey", FoodCategory.PROTEIN),
-    LEAN_BEEF("Lean Beef", FoodCategory.PROTEIN),
+    BEEF("Beef", FoodCategory.PROTEIN),
+    PORK("Pork", FoodCategory.PROTEIN),
     SALMON("Salmon", FoodCategory.PROTEIN, AllergyType.SEAFOOD),
     TUNA("Tuna", FoodCategory.PROTEIN, AllergyType.SEAFOOD),
+    SHRIMP("Shrimp", FoodCategory.PROTEIN, AllergyType.SEAFOOD),
     EGGS("Eggs", FoodCategory.PROTEIN, AllergyType.EGGS),
     GREEK_YOGURT("Greek Yogurt", FoodCategory.PROTEIN, AllergyType.LACTOSE),
     COTTAGE_CHEESE("Cottage Cheese", FoodCategory.PROTEIN, AllergyType.LACTOSE),
@@ -23,7 +25,6 @@ public enum FoodItem {
     CHICKPEAS("Chickpeas", FoodCategory.PROTEIN),
     QUINOA("Quinoa", FoodCategory.PROTEIN),
     BLACK_BEANS("Black Beans", FoodCategory.PROTEIN),
-    PORK_TENDERLOIN("Pork Tenderloin", FoodCategory.PROTEIN),
 
     AVOCADO("Avocado", FoodCategory.FATS),
     OLIVE_OIL("Olive Oil", FoodCategory.FATS),
@@ -35,27 +36,34 @@ public enum FoodItem {
     FLAX_SEEDS("Flax Seeds", FoodCategory.FATS),
     COCONUT_OIL("Coconut Oil", FoodCategory.FATS),
     DARK_CHOCOLATE("Dark Chocolate (70%+)", FoodCategory.FATS),
-    BUTTER("Butter", FoodCategory.FATS, AllergyType.LACTOSE),
     CHEESE("Cheese", FoodCategory.FATS, AllergyType.LACTOSE),
     MACKEREL("Mackerel", FoodCategory.FATS, AllergyType.SEAFOOD),
     SARDINES("Sardines", FoodCategory.FATS, AllergyType.SEAFOOD),
     PUMPKIN_SEEDS("Pumpkin Seeds", FoodCategory.FATS),
 
     BROWN_RICE("Brown Rice", FoodCategory.CARBS),
+    WHITE_RICE("White Rice", FoodCategory.CARBS),
     OATMEAL("Oatmeal", FoodCategory.CARBS),
+    PASTA("Pasta", FoodCategory.CARBS, AllergyType.GLUTEN),
     WHOLE_WHEAT_BREAD("Whole Wheat Bread", FoodCategory.CARBS, AllergyType.GLUTEN),
     WHOLE_WHEAT_PASTA("Whole Wheat Pasta", FoodCategory.CARBS, AllergyType.GLUTEN),
     SWEET_POTATO("Sweet Potato", FoodCategory.CARBS),
     REGULAR_POTATO("Potato", FoodCategory.CARBS),
-    QUINOA_CARB("Quinoa", FoodCategory.CARBS),
     BUCKWHEAT("Buckwheat", FoodCategory.CARBS),
     BANANA("Banana", FoodCategory.CARBS),
     APPLE("Apple", FoodCategory.CARBS),
+    ORANGE("Orange", FoodCategory.CARBS),
+    STRAWBERRIES("Strawberries", FoodCategory.CARBS),
+    BLUEBERRIES("Blueberries", FoodCategory.CARBS),
     BERRIES("Berries (mixed)", FoodCategory.CARBS),
     BROCCOLI("Broccoli", FoodCategory.CARBS),
     SPINACH("Spinach", FoodCategory.CARBS),
     CARROTS("Carrots", FoodCategory.CARBS),
-    BEANS("Beans", FoodCategory.CARBS);
+    TOMATOES("Tomatoes", FoodCategory.CARBS),
+    CUCUMBER("Cucumber", FoodCategory.CARBS),
+    BEANS("Beans", FoodCategory.CARBS),
+    MILK("Milk", FoodCategory.CARBS, AllergyType.LACTOSE),
+    HONEY("Honey", FoodCategory.CARBS);
 
     private final String displayName;
     private final FoodCategory category;

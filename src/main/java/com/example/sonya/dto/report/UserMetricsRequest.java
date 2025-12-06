@@ -24,6 +24,9 @@ public class UserMetricsRequest {
     @Min(value = 100, message = "Height must be at least 100 cm")
     private Double height;
 
+    @Min(value = 1, message = "Age must be at least 1")
+    private Integer age;
+
     @NotNull(message = "Gender is required")
     private Gender gender;
 

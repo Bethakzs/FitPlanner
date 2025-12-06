@@ -1,6 +1,8 @@
 package com.example.sonya.entity;
 
 
+import com.example.sonya.enums.ActivityLevel;
+import com.example.sonya.enums.Gender;
 import com.example.sonya.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -48,6 +50,23 @@ public class User implements UserDetails {
 
     @Column(name = "refresh_token")
     private String refreshToken;
+
+    @Column(name = "age")
+    private Integer age;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender")
+    private Gender gender;
+
+    @Column(name = "height")
+    private Double height;
+
+    @Column(name = "weight")
+    private Double weight;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "activity_level")
+    private ActivityLevel activityLevel;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
