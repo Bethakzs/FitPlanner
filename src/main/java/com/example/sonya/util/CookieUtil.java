@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 public class CookieUtil {
     
     private static final String COOKIE_PATH = "/";
-    private static final String SAME_SITE = "None";
+    private static final String SAME_SITE = "Lax";
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
     private static final long REFRESH_TOKEN_MAX_AGE = 604800;
 

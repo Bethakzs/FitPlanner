@@ -21,7 +21,32 @@ function Dashboard() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
+    const [tooltipVisible, setTooltipVisible] = useState(null);
     const navigate = useNavigate();
+
+    const tooltips = {
+        bmi: "Body Mass Index (BMI) - A measure of body fat based on height and weight. Ranges: <18.5 Underweight, 18.5-24.9 Normal, 25-29.9 Overweight, ≥30 Obese",
+        bmr: "Basal Metabolic Rate (BMR) - The number of calories your body needs at rest to maintain vital functions (breathing, circulation, cell production)",
+        tdee: "Total Daily Energy Expenditure (TDEE) - Total calories you burn per day including physical activity. TDEE = BMR × Activity Factor",
+        activityLevel: "Activity Level affects calorie needs: Low (1.2) - sedentary, Medium (1.55) - moderate exercise 3-5 days/week, High (1.9) - intense exercise 6-7 days/week",
+        allergies: "Select any food allergies to exclude those ingredients from your diet recommendations",
+        protein: "Proteins - Essential for muscle growth and repair. Recommended: 10-35% of total calories",
+        fats: "Fats - Important for hormone production and nutrient absorption. Recommended: 20-35% of total calories",
+        carbs: "Carbohydrates - Primary energy source for your body and brain. Recommended: 45-65% of total calories"
+    };
+
+    const InfoIcon = ({ type }) => (
+        <span 
+            className="info-icon"
+            onMouseEnter={() => setTooltipVisible(type)}
+            onMouseLeave={() => setTooltipVisible(null)}
+        >
+            ℹ️
+            {tooltipVisible === type && (
+                <span className="tooltip">{tooltips[type]}</span>
+            )}
+        </span>
+    );
 
     useEffect(() => {
         loadUserData();
@@ -172,7 +197,7 @@ function Dashboard() {
         <div className="dashboard">
             <header className="dashboard-header">
                 <div className="header-content">
-                    <h1>🥗 Sonya Nutrition</h1>
+                    <h1>🥗Fit Planner</h1>
                     <div className="header-actions">
                         <button onClick={handleLogout} className="btn-logout">
                             Logout
@@ -255,11 +280,14 @@ function Dashboard() {
                                     <option value="FEMALE">Female</option>
                                 </select>
                             </div>
-                            <select name="activityLevel" value={formData.activityLevel} onChange={handleChange}>
-                                <option value="LOW">Low Activity</option>
-                                <option value="MEDIUM">Medium Activity</option>
-                                <option value="HIGH">High Activity</option>
-                            </select>
+                            <div className="form-field-with-info">
+                                <select name="activityLevel" value={formData.activityLevel} onChange={handleChange}>
+                                    <option value="LOW">Low Activity</option>
+                                    <option value="MEDIUM">Medium Activity</option>
+                                    <option value="HIGH">High Activity</option>
+                                </select>
+                                <InfoIcon type="activityLevel" />
+                            </div>
                             <button type="submit" disabled={loading}>
                                 {loading ? 'Updating...' : 'Update Profile'}
                             </button>
@@ -283,7 +311,9 @@ function Dashboard() {
                             />
 
                             <div className="allergies-section">
-                                <label>Allergies (optional):</label>
+                                <label>
+                                    Allergies (optional): <InfoIcon type="allergies" />
+                                </label>
                                 <div className="checkbox-group">
                                     {['GLUTEN', 'LACTOSE', 'NUTS', 'EGGS', 'SEAFOOD', 'SOY'].map(allergy => (
                                         <label key={allergy} className="checkbox-label">
@@ -358,7 +388,7 @@ function Dashboard() {
                         <p className="report-date">Generated: {new Date(currentReport.createdAt).toLocaleString()}</p>
                         
                         <div className="report-card">
-                            <h3>Body Metrics</h3>
+                            <h3>Body Metrics <InfoIcon type="bmi" /></h3>
                             <p><strong>BMI:</strong> {currentReport.bmi?.toFixed(1)} ({currentReport.bmiCategory})</p>
                             <p>{currentReport.bmiInterpretation}</p>
                             <p><strong>Target Weight:</strong> {currentReport.targetWeight} kg</p>
@@ -367,8 +397,8 @@ function Dashboard() {
 
                         <div className="report-card">
                             <h3>Daily Caloric Needs</h3>
-                            <p><strong>BMR:</strong> {currentReport.bmr} kcal</p>
-                            <p><strong>TDEE:</strong> {currentReport.tdee} kcal</p>
+                            <p><strong>BMR:</strong> {currentReport.bmr} kcal <InfoIcon type="bmr" /></p>
+                            <p><strong>TDEE:</strong> {currentReport.tdee} kcal <InfoIcon type="tdee" /></p>
                         </div>
 
                         {diets && diets.length > 0 && (
