@@ -148,7 +148,10 @@ public class NutritionServiceImpl implements NutritionService {
             try {
                 List<Product> products = productService.findByName(foodItem.getDisplayName());
                 if (!products.isEmpty()) {
-                    productIds.add(products.get(0).getId());
+                    Long productId = products.get(0).getId();
+                    if (!productIds.contains(productId)) {
+                        productIds.add(productId);
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("Product not found: " + foodItem.getDisplayName());

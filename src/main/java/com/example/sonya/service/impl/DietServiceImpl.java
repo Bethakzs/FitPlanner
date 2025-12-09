@@ -28,6 +28,7 @@ public class DietServiceImpl implements DietService {
     @Transactional
     public DietDto createDiet(User user, List<Long> productIds) {
         List<Product> products = productIds.stream()
+                .distinct() // Remove duplicates
                 .map(id -> productRepository.findById(id)
                         .orElseThrow(() -> new RuntimeException("Product not found: " + id)))
                 .collect(Collectors.toList());
@@ -64,6 +65,7 @@ public class DietServiceImpl implements DietService {
                 .orElseThrow(() -> new RuntimeException("Diet not found"));
         
         List<Product> products = productIds.stream()
+                .distinct()
                 .map(id -> productRepository.findById(id)
                         .orElseThrow(() -> new RuntimeException("Product not found: " + id)))
                 .collect(Collectors.toList());
@@ -78,7 +80,9 @@ public class DietServiceImpl implements DietService {
             totalProtein, totalFats, totalCarbs
         );
         
-        diet.setProducts(products);
+        diet.getProducts().clear();
+        diet.getProducts().addAll(products);
+        
         diet.setTotalCalories(totalCalories);
         diet.setTotalProtein(totalProtein);
         diet.setTotalFats(totalFats);
